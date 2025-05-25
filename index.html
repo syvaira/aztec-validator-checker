@@ -7,62 +7,67 @@
   <style>
     body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
     input, button { padding: 10px; margin: 10px 0; width: 100%; }
-    .result { margin-top: 20px; background: #f7f7f7; padding: 15px; border-radius: 8px; }
+    .result { margin-top: 20px; background: #f7f7f7; padding: 15px; border-radius: 8px; white-space: pre-wrap;}
     h1 { font-size: 22px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
   <h1>🔎 Validator Info Lookup (getInfo)</h1>
 
-  <input type="text" id="validatorAddress" placeholder="Paste validator address here..." />
+  <input type="text" id="validatorAddress" placeholder="Paste validator address here…" />
   <button onclick="lookup()">Check Info</button>
 
-  <div class="result" id="result">🟡 Waiting for input...</div>
+  <div class="result" id="result">🟡 Waiting for input…</div>
 
   <script>
     const contractAddress = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
 
-    const provider = new ethers.providers.StaticJsonRpcProvider('http://83.171.249.10:8545/', {
-      name: 'sepolia',
-      chainId: 11155111
-    });
+    const provider = new ethers.providers.StaticJsonRpcProvider(
+      'http://83.171.249.10:8545/',
+      { name: 'sepolia', chainId: 11155111 }
+    );
 
-    const abi = [
-      {
-        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
-        "name": "getInfo",
-        "outputs": [
-          { "internalType": "uint256", "name": "", "type": "uint256" },
-          { "internalType": "address", "name": "", "type": "address" },
-          { "internalType": "address", "name": "", "type": "address" },
-          { "internalType": "uint8", "name": "", "type": "uint8" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ];
+    // ABI untuk getInfo(address) → (uint256,address,address,uint8)
+    const abi = [{
+      inputs: [{ internalType: 'address', name: '_validator', type: 'address' }],
+      name: 'getInfo',
+      outputs: [
+        { internalType: 'uint256', name: 'staked', type: 'uint256' },
+        { internalType: 'address', name: 'proposer', type: 'address' },
+        { internalType: 'address', name: 'withdrawer', type: 'address' },
+        { internalType: 'uint8', name: 'status', type: 'uint8' },
+      ],
+      stateMutability: 'view',
+      type: 'function'
+    }];
 
     const contract = new ethers.Contract(contractAddress, abi, provider);
 
     async function lookup() {
-      const address = document.getElementById('validatorAddress').value.trim().toLowerCase();
+      const address = document.getElementById('validatorAddress').value.trim();
       const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = '⏳ Fetching info...';
+      if (!ethers.utils.isAddress(address)) {
+        return resultDiv.textContent = '❌ Invalid address';
+      }
+      resultDiv.textContent = '⏳ Fetching info…';
 
       try {
-        const [stakedAmount, proposer, withdrawer, status] = await contract.getInfo(address);
+        const [staked, proposer, withdrawer, status] = await contract.getInfo(address);
+
+        // format staked as raw integer with thousand separators
+        const raw = staked.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
         resultDiv.innerHTML = `
-          <strong>📋 BASIC INFO</strong><br>
-          🔑 Address: ${address}<br>
-          💰 Staked Amount: ${ethers.utils.formatEther(stakedAmount)} ETH<br>
-          👤 Proposer Address: ${proposer}<br>
-          💼 Withdrawer Address: ${withdrawer}<br>
-          📊 Status Code: ${status}
+<strong>📋 BASIC INFO</strong>
+🔑 Address: ${address}
+💰 Staked Amount: ${raw}
+👤 Proposer Address: ${proposer}
+💼 Withdrawer Address: ${withdrawer}
+📊 Status Code: ${status}
         `;
-      } catch (error) {
-        resultDiv.innerHTML = `<span style="color:red;">❌ Error:</span> ${error.message}`;
-        console.error(error);
+      } catch (e) {
+        console.error(e);
+        resultDiv.textContent = `❌ Error: ${e.message}`;
       }
     }
   </script>
