@@ -5,10 +5,11 @@
   <title>Validator Info Lookup</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
     input, button { padding: 10px; margin: 10px 0; width: 100%; }
-    .result { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 10px; white-space: pre-wrap; }
-    h1 { font-size: 22px; margin-bottom: 15px; }
+    .result { margin-top: 20px; background: #f1f1f1; padding: 15px; border-radius: 10px; white-space: pre-wrap; }
+    h1 { font-size: 24px; margin-bottom: 15px; }
+    a { color: blue; }
   </style>
 </head>
 <body>
@@ -25,113 +26,107 @@
       { name: 'sepolia', chainId: 11155111 }
     );
 
-    const validatorContract = new ethers.Contract(
-      '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E',
-      [{
-        "inputs": [{ "internalType": "address", "name": "validator", "type": "address" }],
-        "name": "getInfo",
-        "outputs": [
-          { "internalType": "uint256", "name": "", "type": "uint256" },
-          { "internalType": "address", "name": "", "type": "address" },
-          { "internalType": "address", "name": "", "type": "address" },
-          { "internalType": "uint8", "name": "", "type": "uint8" }
+    const contractAddr = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
+
+    const abi = [
+      {
+        name: "getInfo",
+        inputs: [{ name: "validator", type: "address" }],
+        outputs: [
+          { name: "stakedAmount", type: "uint256" },
+          { name: "proposer", type: "address" },
+          { name: "withdrawer", type: "address" },
+          { name: "status", type: "uint8" }
         ],
-        "stateMutability": "view",
-        "type": "function"
-      }],
-      provider
-    );
+        stateMutability: "view", type: "function"
+      },
+      {
+        name: "getAttesters",
+        inputs: [],
+        outputs: [{ name: "", type: "address[]" }],
+        stateMutability: "view", type: "function"
+      },
+      {
+        name: "getVersion",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "view", type: "function"
+      },
+      {
+        name: "getBurnAddress",
+        inputs: [],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view", type: "function"
+      },
+      {
+        name: "getEpochDuration",
+        inputs: [],
+        outputs: [{ name: "", type: "uint32" }],
+        stateMutability: "view", type: "function"
+      },
+      {
+        name: "getExitInfo",
+        inputs: [{ name: "", type: "address" }],
+        outputs: [
+          { name: "exitTimestamp", type: "uint256" },
+          { name: "withdrawTarget", type: "address" }
+        ],
+        stateMutability: "view", type: "function"
+      }
+    ];
 
-    const registryContract = new ethers.Contract(
-      '0xF739D03e98e23A7B65940848aBA8921fF3bAc4b2',
-      [{
-        "name": "getRollup",
-        "inputs": [],
-        "outputs": [{ "type": "address" }],
-        "stateMutability": "view",
-        "type": "function"
-      }],
-      provider
-    );
-
-    const rollupContract = new ethers.Contract(
-      '0xbd6112ffb782805bed87b3748776eeb5c20b7388',
-      [
-        {
-          "name": "getEpochDuration",
-          "inputs": [],
-          "outputs": [{ "type": "uint32" }],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "name": "getBurnAddress",
-          "inputs": [],
-          "outputs": [{ "type": "address" }],
-          "stateMutability": "view",
-          "type": "function"
-        },
-        {
-          "name": "getVersion",
-          "inputs": [],
-          "outputs": [{ "type": "uint256" }],
-          "stateMutability": "view",
-          "type": "function"
-        }
-      ],
-      provider
-    );
+    const contract = new ethers.Contract(contractAddr, abi, provider);
 
     async function lookup() {
-      const address = document.getElementById('validatorAddress').value.trim();
-      const resultDiv = document.getElementById('result');
+      const addr = document.getElementById("validatorAddress").value.trim();
+      const resultDiv = document.getElementById("result");
 
-      if (!ethers.utils.isAddress(address)) {
-        resultDiv.textContent = '❌ Invalid address';
+      if (!ethers.utils.isAddress(addr)) {
+        resultDiv.innerText = "❌ Invalid address";
         return;
       }
 
-      resultDiv.textContent = '⏳ Fetching validator info…';
+      resultDiv.innerText = "⏳ Fetching validator info…";
 
       try {
-        const [info, rollupAddr, epoch, burnAddr, version] = await Promise.all([
-          validatorContract.getInfo(address),
-          registryContract.getRollup(),
-          rollupContract.getEpochDuration(),
-          rollupContract.getBurnAddress(),
-          rollupContract.getVersion()
+        const [info, attesters, version, burn, epoch] = await Promise.all([
+          contract.getInfo(addr),
+          contract.getAttesters(),
+          contract.getVersion(),
+          contract.getBurnAddress(),
+          contract.getEpochDuration()
         ]);
 
-        const stakedStr = info[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const status = parseInt(info[3]);
-        const statusText =
-          status === 3 ? 'The validator has completed their exit delay and can be exited from the validator set'
-          : status === 2 ? 'Pending exit'
-          : status === 1 ? 'Active'
-          : 'Unknown';
+        let exitTimestamp = "(unknown)";
+        try {
+          const exitInfo = await contract.getExitInfo(addr);
+          exitTimestamp = new Date(exitInfo.exitTimestamp * 1000).toUTCString();
+        } catch (e) {
+          // some validators may not have exitInfo
+        }
+
+        const isRegistered = attesters.map(a => a.toLowerCase()).includes(addr.toLowerCase());
+        const statusDesc = ["Unknown", "Active", "Pending Exit", "Exited"][info.status] || "Unknown";
 
         resultDiv.innerHTML = `
 🔷 VALIDATOR DETAILS 🔷
 
-🔴 Status: ${statusText}
-
 📋 BASIC INFO
-🔑 Address: ${address}
-💰 Staked Amount: ${stakedStr}
-👤 Proposer Address: ${info[1]}
-💼 Withdrawer Address: ${info[2]}
+🔑 Address: ${addr}
+💰 Staked Amount: ${ethers.utils.formatEther(info.stakedAmount)} ETH
+👤 Proposer Address: ${info.proposer}
+💼 Withdrawer Address: ${info.withdrawer}
+🔢 Status: ${statusDesc}
+🧾 Registered: ${isRegistered ? "✅ Yes" : "❌ No"}
+🕒 Exit Timestamp: ${exitTimestamp}
 
 🌐 NETWORK INFO 🌐
-🧮 Canonical Rollup (from Registry): ${rollupAddr}
-⏱️ Epoch Duration: ${epoch} seconds
-🔥 Burn Address: ${burnAddr}
-🔢 Version: ${version}
+🧮 Total Validators: ${attesters.length}
+📦 Contract Version: ${version}
+⏱ Epoch Duration: ${epoch} seconds
+🔥 Burn Address: ${burn}
 
-⚠️ ATTENTION ⚠️
-Aztec chain has been upgraded on 22 May 2025
-It seems some validators should be re-added to the set (waiting for confirmation from team)
-
-🔔 Follow us on Twitter to stay tuned for future news about Aztec and our bot:
+🔔 Follow us on Twitter:
 🔗 <a href="https://x.com/Ember_Stake" target="_blank">https://x.com/Ember_Stake</a>
         `;
       } catch (err) {
