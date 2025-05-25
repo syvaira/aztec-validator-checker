@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Validator Checker (Sepolia)</title>
+  <title>Validator Info Lookup</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
@@ -12,10 +12,10 @@
   </style>
 </head>
 <body>
-  <h1>🔍 Validator Info Checker (Sepolia)</h1>
+  <h1>🔎 Validator Info Lookup (getInfo)</h1>
 
   <input type="text" id="validatorAddress" placeholder="Paste validator address here..." />
-  <button onclick="checkValidator()">Check Validator</button>
+  <button onclick="lookup()">Check Info</button>
 
   <div class="result" id="result">🟡 Waiting for input...</div>
 
@@ -27,65 +27,42 @@
       chainId: 11155111
     });
 
-    const validatorAbi = [
+    const abi = [
       {
-        "inputs": [],
-        "name": "getAttesters",
-        "outputs": [{ "internalType": "address[]", "name": "", "type": "address[]" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "getBurnAddress",
-        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "getEpochDuration",
-        "outputs": [{ "internalType": "uint32", "name": "", "type": "uint32" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "owner",
-        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "name": "getInfo",
+        "outputs": [
+          { "internalType": "uint256", "name": "", "type": "uint256" },
+          { "internalType": "address", "name": "", "type": "address" },
+          { "internalType": "address", "name": "", "type": "address" },
+          { "internalType": "uint8", "name": "", "type": "uint8" }
+        ],
         "stateMutability": "view",
         "type": "function"
       }
     ];
 
-    const contract = new ethers.Contract(contractAddress, validatorAbi, provider);
+    const contract = new ethers.Contract(contractAddress, abi, provider);
 
-    async function checkValidator() {
+    async function lookup() {
       const address = document.getElementById('validatorAddress').value.trim().toLowerCase();
       const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = '⏳ Checking...';
+      resultDiv.innerHTML = '⏳ Fetching info...';
 
       try {
-        const attesters = await contract.getAttesters();
-        const isRegistered = attesters.map(a => a.toLowerCase()).includes(address);
-
-        const burnAddr = await contract.getBurnAddress();
-        const owner = await contract.owner();
-        const epoch = await contract.getEpochDuration();
+        const [stakedAmount, proposer, withdrawer, status] = await contract.getInfo(address);
 
         resultDiv.innerHTML = `
-          <strong>📋 VALIDATOR INFO</strong><br>
+          <strong>📋 BASIC INFO</strong><br>
           🔑 Address: ${address}<br>
-          🟢 Registered Validator: ${isRegistered ? '✅ Yes' : '❌ No'}<br><br>
-          
-          <strong>🌐 CONTRACT INFO</strong><br>
-          🔥 Burn Address: ${burnAddr}<br>
-          👑 Owner: ${owner}<br>
-          ⏳ Epoch Duration: ${epoch}
+          💰 Staked Amount: ${ethers.utils.formatEther(stakedAmount)} ETH<br>
+          👤 Proposer Address: ${proposer}<br>
+          💼 Withdrawer Address: ${withdrawer}<br>
+          📊 Status Code: ${status}
         `;
       } catch (error) {
         resultDiv.innerHTML = `<span style="color:red;">❌ Error:</span> ${error.message}`;
-        console.error("Full error:", error);
+        console.error(error);
       }
     }
   </script>
