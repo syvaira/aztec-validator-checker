@@ -45,12 +45,40 @@
     const registryContract = new ethers.Contract(
       '0xF739D03e98e23A7B65940848aBA8921fF3bAc4b2',
       [{
-        "inputs": [],
         "name": "getRollup",
-        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "inputs": [],
+        "outputs": [{ "type": "address" }],
         "stateMutability": "view",
         "type": "function"
       }],
+      provider
+    );
+
+    const rollupContract = new ethers.Contract(
+      '0xbd6112ffb782805bed87b3748776eeb5c20b7388',
+      [
+        {
+          "name": "getEpochDuration",
+          "inputs": [],
+          "outputs": [{ "type": "uint32" }],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "name": "getBurnAddress",
+          "inputs": [],
+          "outputs": [{ "type": "address" }],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "name": "getVersion",
+          "inputs": [],
+          "outputs": [{ "type": "uint256" }],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ],
       provider
     );
 
@@ -66,10 +94,16 @@
       resultDiv.textContent = '⏳ Fetching validator info…';
 
       try {
-        const [staked, proposer, withdrawer, status] = await validatorContract.getInfo(address);
-        const rollup = await registryContract.getRollup();
+        const [info, rollupAddr, epoch, burnAddr, version] = await Promise.all([
+          validatorContract.getInfo(address),
+          registryContract.getRollup(),
+          rollupContract.getEpochDuration(),
+          rollupContract.getBurnAddress(),
+          rollupContract.getVersion()
+        ]);
 
-        const stakedStr = staked.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const stakedStr = info[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const status = parseInt(info[3]);
         const statusText =
           status === 3 ? 'The validator has completed their exit delay and can be exited from the validator set'
           : status === 2 ? 'Pending exit'
@@ -84,11 +118,21 @@
 📋 BASIC INFO
 🔑 Address: ${address}
 💰 Staked Amount: ${stakedStr}
-👤 Proposer Address: ${proposer}
-💼 Withdrawer Address: ${withdrawer}
+👤 Proposer Address: ${info[1]}
+💼 Withdrawer Address: ${info[2]}
 
 🌐 NETWORK INFO 🌐
-🧮 Canonical Rollup: ${rollup}
+🧮 Canonical Rollup (from Registry): ${rollupAddr}
+⏱️ Epoch Duration: ${epoch} seconds
+🔥 Burn Address: ${burnAddr}
+🔢 Version: ${version}
+
+⚠️ ATTENTION ⚠️
+Aztec chain has been upgraded on 22 May 2025
+It seems some validators should be re-added to the set (waiting for confirmation from team)
+
+🔔 Follow us on Twitter to stay tuned for future news about Aztec and our bot:
+🔗 <a href="https://x.com/Ember_Stake" target="_blank">https://x.com/Ember_Stake</a>
         `;
       } catch (err) {
         console.error(err);
