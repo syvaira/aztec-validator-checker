@@ -1,51 +1,51 @@
 const validatorAbi = [
   {
+    "inputs": [],
     "name": "getVersion",
-    "type": "function",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "type": "string" }]
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getBurnAddress",
-    "type": "function",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
     "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "type": "address" }]
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getEpochDuration",
-    "type": "function",
+    "outputs": [{ "internalType": "uint32", "name": "", "type": "uint32" }],
     "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "type": "uint32" }]
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getGenesisTime",
-    "type": "function",
+    "outputs": [{ "internalType": "uint128", "name": "", "type": "uint128" }],
     "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "type": "uint128" }]
+    "type": "function"
   },
   {
+    "inputs": [],
     "name": "getAttesters",
-    "type": "function",
+    "outputs": [{ "internalType": "address[]", "name": "", "type": "address[]" }],
     "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "type": "address[]" }]
+    "type": "function"
   },
   {
+    "inputs": [{ "internalType": "uint256", "name": "depositId", "type": "uint256" }],
     "name": "status",
-    "type": "function",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
-    "inputs": [{ "name": "depositId", "type": "uint256" }],
-    "outputs": [{ "type": "string" }]
+    "type": "function"
   },
   {
-    "name": "owner",
-    "type": "function",
-    "stateMutability": "view",
     "inputs": [],
-    "outputs": [{ "type": "address" }]
+    "name": "owner",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
