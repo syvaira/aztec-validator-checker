@@ -6,13 +6,14 @@
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="abi.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
     input, button { padding: 10px; margin: 10px 0; width: 100%; }
     .result { margin-top: 20px; background: #f0f0f0; padding: 15px; border-radius: 8px; }
+    h1 { font-size: 22px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
-  <h1>🔎 Validator Info Checker</h1>
+  <h1>🔎 Validator Info Checker (Sepolia)</h1>
   <input type="text" id="validatorAddress" placeholder="Paste validator address here..." />
   <button onclick="checkValidator()">Check Validator Info</button>
   
@@ -20,7 +21,10 @@
 
   <script>
     const contractAddress = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
+
+    // Ganti provider ke node Sepolia pribadi
     const provider = new ethers.providers.JsonRpcProvider('http://83.171.249.10:8545/');
+
     const contract = new ethers.Contract(contractAddress, validatorAbi, provider);
 
     async function checkValidator() {
@@ -30,11 +34,11 @@
 
       try {
         const attesters = await contract.getAttesters();
-        const found = attesters.includes(address.toLowerCase());
+        const found = attesters.map(a => a.toLowerCase()).includes(address.toLowerCase());
 
         let output = `<strong>📋 BASIC INFO</strong><br>`;
         output += `🔑 Address: ${address}<br>`;
-        output += `🟢 Registered Validator: ${found ? 'Yes' : 'No'}<br>`;
+        output += `🟢 Registered Validator: ${found ? '✅ Yes' : '❌ No'}<br>`;
 
         if (found) {
           const owner = await contract.owner();
