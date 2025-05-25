@@ -23,7 +23,13 @@
     const contractAddress = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
 
     // Ganti provider ke node Sepolia pribadi
-    const provider = new ethers.providers.JsonRpcProvider('http://83.171.249.10:8545/');
+    const sepoliaNetwork = {
+      name: 'sepolia',
+      chainId: 11155111
+    };
+    
+    const provider = new ethers.providers.StaticJsonRpcProvider('http://83.171.249.10:8545/', sepoliaNetwork);
+
 
     const contract = new ethers.Contract(contractAddress, validatorAbi, provider);
 
