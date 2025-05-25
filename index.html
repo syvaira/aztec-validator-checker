@@ -22,13 +22,11 @@
   <script>
     const contractAddress = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
 
-    // Gunakan StaticJsonRpcProvider agar tidak perlu deteksi network otomatis
     const provider = new ethers.providers.StaticJsonRpcProvider('http://83.171.249.10:8545/', {
       name: 'sepolia',
       chainId: 11155111
     });
 
-    // ABI minimal dan valid (yang pasti tidak error)
     const validatorAbi = [
       {
         "inputs": [],
@@ -65,7 +63,6 @@
     async function checkValidator() {
       const address = document.getElementById('validatorAddress').value.trim().toLowerCase();
       const resultDiv = document.getElementById('result');
-
       resultDiv.innerHTML = '⏳ Checking...';
 
       try {
@@ -88,6 +85,7 @@
         `;
       } catch (error) {
         resultDiv.innerHTML = `<span style="color:red;">❌ Error:</span> ${error.message}`;
+        console.error("Full error:", error);
       }
     }
   </script>
