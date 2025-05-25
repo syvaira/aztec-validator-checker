@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Validator Info Lookup</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
     input, button { padding: 10px; margin: 10px 0; width: 100%; }
-    .result { margin-top: 20px; background: #f7f7f7; padding: 15px; border-radius: 8px; white-space: pre-wrap;}
+    .result { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 10px; white-space: pre-wrap; }
     h1 { font-size: 22px; margin-bottom: 15px; }
   </style>
 </head>
 <body>
-  <h1>🔎 Validator Info Lookup (getInfo)</h1>
+  <h1>🔎 Validator Info Checker (Sepolia)</h1>
 
   <input type="text" id="validatorAddress" placeholder="Paste validator address here…" />
   <button onclick="lookup()">Check Info</button>
@@ -20,54 +20,79 @@
   <div class="result" id="result">🟡 Waiting for input…</div>
 
   <script>
-    const contractAddress = '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E';
-
     const provider = new ethers.providers.StaticJsonRpcProvider(
       'https://ethereum-sepolia.publicnode.com',
       { name: 'sepolia', chainId: 11155111 }
     );
 
-    // ABI untuk getInfo(address) → (uint256,address,address,uint8)
-    const abi = [{
-      inputs: [{ internalType: 'address', name: '_validator', type: 'address' }],
-      name: 'getInfo',
-      outputs: [
-        { internalType: 'uint256', name: 'staked', type: 'uint256' },
-        { internalType: 'address', name: 'proposer', type: 'address' },
-        { internalType: 'address', name: 'withdrawer', type: 'address' },
-        { internalType: 'uint8', name: 'status', type: 'uint8' },
-      ],
-      stateMutability: 'view',
-      type: 'function'
-    }];
+    const validatorContract = new ethers.Contract(
+      '0xeE6d4e937f0493Fb461F28A75Cf591f1dBa8704E',
+      [{
+        "inputs": [{ "internalType": "address", "name": "validator", "type": "address" }],
+        "name": "getInfo",
+        "outputs": [
+          { "internalType": "uint256", "name": "", "type": "uint256" },
+          { "internalType": "address", "name": "", "type": "address" },
+          { "internalType": "address", "name": "", "type": "address" },
+          { "internalType": "uint8", "name": "", "type": "uint8" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }],
+      provider
+    );
 
-    const contract = new ethers.Contract(contractAddress, abi, provider);
+    const registryContract = new ethers.Contract(
+      '0xF739D03e98e23A7B65940848aBA8921fF3bAc4b2',
+      [{
+        "inputs": [],
+        "name": "getRollup",
+        "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "stateMutability": "view",
+        "type": "function"
+      }],
+      provider
+    );
 
     async function lookup() {
       const address = document.getElementById('validatorAddress').value.trim();
       const resultDiv = document.getElementById('result');
+
       if (!ethers.utils.isAddress(address)) {
-        return resultDiv.textContent = '❌ Invalid address';
+        resultDiv.textContent = '❌ Invalid address';
+        return;
       }
-      resultDiv.textContent = '⏳ Fetching info…';
+
+      resultDiv.textContent = '⏳ Fetching validator info…';
 
       try {
-        const [staked, proposer, withdrawer, status] = await contract.getInfo(address);
+        const [staked, proposer, withdrawer, status] = await validatorContract.getInfo(address);
+        const rollup = await registryContract.getRollup();
 
-        // format staked as raw integer with thousand separators
-        const raw = staked.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        const stakedStr = staked.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        const statusText =
+          status === 3 ? 'The validator has completed their exit delay and can be exited from the validator set'
+          : status === 2 ? 'Pending exit'
+          : status === 1 ? 'Active'
+          : 'Unknown';
 
         resultDiv.innerHTML = `
-<strong>📋 BASIC INFO</strong>
+🔷 VALIDATOR DETAILS 🔷
+
+🔴 Status: ${statusText}
+
+📋 BASIC INFO
 🔑 Address: ${address}
-💰 Staked Amount: ${raw}
+💰 Staked Amount: ${stakedStr}
 👤 Proposer Address: ${proposer}
 💼 Withdrawer Address: ${withdrawer}
-📊 Status Code: ${status}
+
+🌐 NETWORK INFO 🌐
+🧮 Canonical Rollup: ${rollup}
         `;
-      } catch (e) {
-        console.error(e);
-        resultDiv.textContent = `❌ Error: ${e.message}`;
+      } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = `<span style="color:red;">❌ Error:</span> ${err.message}`;
       }
     }
   </script>
